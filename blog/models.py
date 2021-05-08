@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.urls import reverse
 from django.contrib.auth.models import User
 
@@ -7,14 +7,16 @@ from django.contrib.auth.models import User
 class PostQuerySet(models.QuerySet):
 
     def popular(self):
-        popular_posts = self.annotate(num_likes=Count('likes', distinct=True)).order_by('-num_likes')
+        popular_posts = self.annotate(
+            num_likes=Count('likes', distinct=True)).\
+            order_by('-num_likes')
         return popular_posts
 
     def fetch_with_comments_count(self):
         posts_with_comments = Post.objects.filter(
             id__in=self
         ).annotate(
-            comments_count=Count('comments', distinct=True)
+            comments_count=Count('comments')
         )
         post_ids_and_comments = dict(
             posts_with_comments.values_list('id', 'comments_count')
@@ -22,6 +24,17 @@ class PostQuerySet(models.QuerySet):
         for post in self:
             post.comments_count = post_ids_and_comments[post.id]
         return self
+
+    def fetch_posts_count_for_tags(self):
+        return self.prefetch_related(
+            Prefetch(
+                'tags',
+                queryset=Tag.objects.annotate(posts_count=Count('posts')),
+                to_attr='tags_with_posts'))
+
+    def fresh(self):
+        fresh_posts = self.order_by('-published_at')
+        return fresh_posts
 
 
 class Post(models.Model):
@@ -36,6 +49,7 @@ class Post(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор',
+        related_name='authors',
         limit_choices_to={'is_staff': True})
     likes = models.ManyToManyField(
         User,
@@ -62,8 +76,21 @@ class Post(models.Model):
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
-        popular_tags = self.annotate(num_posts=Count('posts', distinct=True)).order_by('-num_posts')
+        popular_tags = self.annotate(
+            posts_count=Count('posts', distinct=True)).\
+            order_by('-posts_count')
         return popular_tags
+
+    def fetch_with_posts_count(self):
+        ids = [tag.id for tag in self]
+        tags_with_posts = Tag.objects.filter(
+            id__in=ids).annotate(
+            posts_count=Count('posts'))
+        ids_and_posts = tags_with_posts.values_list('id', 'posts_count')
+        count_for_id = dict(ids_and_posts)
+        for tag in self:
+            tag.posts_count = count_for_id[tag.id]
+        return self
 
 
 class Tag(models.Model):
@@ -94,6 +121,7 @@ class Comment(models.Model):
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
+        related_name='posted_authors',
         verbose_name='Автор')
 
     text = models.TextField('Текст комментария')
