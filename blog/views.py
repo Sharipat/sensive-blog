@@ -37,9 +37,15 @@ def index(request):
     most_popular_tags = Tag.objects.popular()[:5]
 
     context = {
-        'most_popular_posts': [serialize_post(post) for post in most_popular_posts],
-        'page_posts': [serialize_post(post) for post in most_fresh_posts],
-        'popular_tags': [serialize_tag(tag) for tag in most_popular_tags],
+        'most_popular_posts': [
+            serialize_post(post) for post in most_popular_posts
+        ],
+        'page_posts': [
+            serialize_post(post) for post in most_fresh_posts
+        ],
+        'popular_tags': [
+            serialize_tag(tag) for tag in most_popular_tags
+        ],
     }
     return render(request, 'index.html', context)
 
