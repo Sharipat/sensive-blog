@@ -1,6 +1,6 @@
-# Blog named after. Yuri Grigorievich
+# Yuri Grigorievich's Blog 
 
-Blog about the commercial success of Yuri Grigorievich. I share advice on business, life and raising children.
+Blog about the commercial success of Yuri Grigorievich. He shares advice on business, life and raising children.
 
 ![Screenshot](screenshots/site.png)
 
